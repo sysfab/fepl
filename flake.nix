@@ -18,9 +18,8 @@
 
           src = ./.;
 
-          npmDepsHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+          npmDepsHash = "sha256-0oWPUuZW3JJoztON92idwBHuCR5k9W98UtJd9huSGFU=";
 
-          # optional
           nodejs = pkgs.nodejs_20;
 
           meta = {
