@@ -2,7 +2,9 @@ node_modules/
 lib/
 dist/
 backend/
-result/
+
+result
+result-*
 
 coverage/
 *.log
