@@ -2,7 +2,6 @@ node_modules/
 lib/
 dist/
 backend/
-result/
 
 coverage/
 *.log
