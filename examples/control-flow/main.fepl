@@ -1,0 +1,19 @@
+let i = 0
+while (i < 3) {
+    i += 1
+}
+
+let items = ["a", "b", "c"]
+for (item in items) {
+    print(item)
+}
+
+for (var j = 5; j > 0; j--) {
+    print(j)
+}
+
+if (i == 3) {
+    print("done")
+} else {
+    print("not-done")
+}

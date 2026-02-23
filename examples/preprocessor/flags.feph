@@ -1,0 +1,10 @@
+$define FEATURE_ALPHA 1
+$define TARGET_NAME __BACKEND__
+
+$if FEATURE_ALPHA ${
+$define FEATURE_LABEL "alpha"
+}
+$else ${
+$define FEATURE_LABEL "disabled"
+}
+$fi

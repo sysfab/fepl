@@ -1,0 +1,27 @@
+{
+  "name": "fepl",
+  "version": "1.0.0",
+  "description": "",
+  "author": "sysfab",
+  "license": "ISC",
+  "main": "lib/cli/index.js",
+  "bin": {
+    "fepl": "lib/cli/index.js"
+  },
+  "scripts": {
+    "dev": "tsx src/cli/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "run": "node lib/cli/index.js",
+    "test": "vitest"
+  },
+  "type": "commonjs",
+  "devDependencies": {
+    "@types/node": "^25.3.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  },
+  "dependencies": {
+    "commander": "^14.0.3"
+  }
+}

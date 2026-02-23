@@ -1,0 +1,20 @@
+import { readFile, writeFile as write } from "fs"
+
+let greeting = "Hello from FEPL"
+let nums = [1, 2, 3]
+let user = { name: "Ada", role: "engineer" }
+
+func add(a, b) {
+    return a + b
+}
+
+let total = add(nums[0], nums[1])
+let msg = `${greeting} - total is ${total}`
+
+let { name, role: title } = user
+let [first, second] = nums
+
+name = "Grace"
+[first, second] = [second, first]
+
+delete user.role

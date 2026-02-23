@@ -1,0 +1,12 @@
+import { getBackend, type Backend, type BackendRegistry } from "./backend";
+import { jsBackend } from "./js";
+
+export const backends: BackendRegistry = {
+    [jsBackend.id]: jsBackend,
+};
+
+export type BackendId = keyof typeof backends;
+
+export function resolveBackend(id: string): Backend {
+    return getBackend(backends, id);
+}

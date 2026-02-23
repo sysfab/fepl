@@ -1,0 +1,21 @@
+$include flags.feph
+
+let backend = TARGET_NAME
+let feature = FEATURE_LABEL
+
+$define MODE dev
+
+$if MODE == prod ${
+let apiUrl = "https://api.example.com"
+}
+$elif MODE == stage ${
+let apiUrl = "https://stage.example.com"
+}
+$else ${
+let apiUrl = "http://localhost:3000"
+}
+$fi
+
+$undefine MODE
+
+let modeToken = MODE
