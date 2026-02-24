@@ -85,6 +85,12 @@ describe("binary expressions", () => {
         ["1 * 2",   "1 * 2"],
         ["1 / 2",   "1 / 2"],
         ["1 % 2",   "1 % 2"],
+        ["a & b",   "a & b"],
+        ["a | b",   "a | b"],
+        ["a ^ b",   "a ^ b"],
+        ["a << b",  "a << b"],
+        ["a >> b",  "a >> b"],
+        ["a >>> b", "a >>> b"],
         ["a == b",  "a == b"],
         ["a != b",  "a != b"],
         ["a < b",   "a < b"],
@@ -123,6 +129,10 @@ describe("unary expressions", () => {
     it("emits prefix --", () => {
         expect(emitExpr("--i")).toBe("--i");
     });
+    
+    it("emits prefix ~", () => {
+        expect(emitExpr("~x")).toBe("~x");
+    });
 
     it("emits delete unary with spacing", () => {
         expect(emitExpr("delete obj.x")).toBe("delete obj.x");
@@ -148,6 +158,30 @@ describe("assignment expressions", () => {
 
     it("emits -=", () => {
         expect(emitExpr("x -= 1")).toBe("x -= 1");
+    });
+
+    it("emits &=", () => {
+        expect(emitExpr("x &= 1")).toBe("x &= 1");
+    });
+
+    it("emits |=", () => {
+        expect(emitExpr("x |= 1")).toBe("x |= 1");
+    });
+
+    it("emits ^=", () => {
+        expect(emitExpr("x ^= 1")).toBe("x ^= 1");
+    });
+
+    it("emits <<=", () => {
+        expect(emitExpr("x <<= 1")).toBe("x <<= 1");
+    });
+
+    it("emits >>=", () => {
+        expect(emitExpr("x >>= 1")).toBe("x >>= 1");
+    });
+
+    it("emits >>>=", () => {
+        expect(emitExpr("x >>>= 1")).toBe("x >>>= 1");
     });
 
     it("emits array destructuring assignment", () => {

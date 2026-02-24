@@ -229,14 +229,28 @@ describe("operator disambiguation", () => {
         ["!=", TokenKind.NotEquals],
         ["<=", TokenKind.LessEquals],
         [">=", TokenKind.GreaterEquals],
+        ["&=", TokenKind.AmpersandEquals],
+        ["|=", TokenKind.PipeEquals],
+        ["^=", TokenKind.CaretEquals],
+        ["<<=", TokenKind.LeftShiftEquals],
+        [">>=", TokenKind.RightShiftEquals],
+        [">>>=", TokenKind.UnsignedRightShiftEquals],
         ["||", TokenKind.LogicalOr],
         ["&&", TokenKind.LogicalAnd],
         ["+",  TokenKind.Plus],
         ["-",  TokenKind.Minus],
+        ["&",  TokenKind.Ampersand],
+        ["|",  TokenKind.Pipe],
+        ["^",  TokenKind.Caret],
+        ["~",  TokenKind.Tilde],
+        ["<<", TokenKind.LeftShift],
+        [">>", TokenKind.RightShift],
+        [">>>", TokenKind.UnsignedRightShift],
         ["=",  TokenKind.Assignment],
         ["!",  TokenKind.Not],
         ["<",  TokenKind.Less],
         [">",  TokenKind.Greater],
+        
     ];
 
     for (const [src, kind] of cases) {

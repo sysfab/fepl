@@ -101,7 +101,7 @@ export const DEFAULT_PATTERNS: RegexPattern[] = [
     // Numbers (int or float)
     { regex: /^\d+(\.\d+)?/, handler: valueHandler(TokenKind.Number) },
 
-    // Two-character operators — must come before single-char variants
+    // Multiple character operators — must come before single-char variants
     { regex: /^=>/,   handler: staticHandler(TokenKind.Arrow) },
     { regex: /^\+\+/, handler: staticHandler(TokenKind.PlusPlus) },
     { regex: /^--/,   handler: staticHandler(TokenKind.MinusMinus) },
@@ -113,6 +113,15 @@ export const DEFAULT_PATTERNS: RegexPattern[] = [
     { regex: /^>=/,   handler: staticHandler(TokenKind.GreaterEquals) },
     { regex: /^\|\|/, handler: staticHandler(TokenKind.LogicalOr) },
     { regex: /^&&/,   handler: staticHandler(TokenKind.LogicalAnd) },
+    { regex: /^<<=/,  handler: staticHandler(TokenKind.LeftShiftEquals) },
+    { regex: /^>>=/,  handler: staticHandler(TokenKind.RightShiftEquals) },
+    { regex: /^>>>=/, handler: staticHandler(TokenKind.UnsignedRightShiftEquals) },
+    { regex: /^&=/,   handler: staticHandler(TokenKind.AmpersandEquals) },
+    { regex: /^\|=/,  handler: staticHandler(TokenKind.PipeEquals) },
+    { regex: /^\^=/,  handler: staticHandler(TokenKind.CaretEquals) },
+    { regex: /^>>>/,  handler: staticHandler(TokenKind.UnsignedRightShift) },
+    { regex: /^<</,   handler: staticHandler(TokenKind.LeftShift) },
+    { regex: /^>>/,   handler: staticHandler(TokenKind.RightShift) },
 
     // Single-character operators
     { regex: /^=/,  handler: staticHandler(TokenKind.Assignment) },
@@ -124,6 +133,10 @@ export const DEFAULT_PATTERNS: RegexPattern[] = [
     { regex: /^\//,  handler: staticHandler(TokenKind.Slash) },
     { regex: /^\*/, handler: staticHandler(TokenKind.Star) },
     { regex: /^%/,  handler: staticHandler(TokenKind.Percent) },
+    { regex: /^&/,  handler: staticHandler(TokenKind.Ampersand) },
+    { regex: /^\|/, handler: staticHandler(TokenKind.Pipe) },
+    { regex: /^\^/, handler: staticHandler(TokenKind.Caret) },
+    { regex: /^~/,  handler: staticHandler(TokenKind.Tilde) },
 
     // Delimiters
     { regex: /^\[/, handler: staticHandler(TokenKind.OpenBracket) },

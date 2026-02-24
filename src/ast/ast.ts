@@ -265,6 +265,7 @@ export const BP = {
     LogicalAnd:      8,
     Equality:        10,
     Relational:      12,
+    Bitwise:         13,
     Additive:        14,
     Multiplicative:  16,
     Unary:           18,
@@ -904,6 +905,7 @@ export class Parser {
         this.registerNud(TokenKind.Delete,     prefixUnary("delete"));
         this.registerNud(TokenKind.PlusPlus,   prefixUnary("++"));
         this.registerNud(TokenKind.MinusMinus, prefixUnary("--"));
+        this.registerNud(TokenKind.Tilde,      prefixUnary("~"));
 
         // Binary — left-associative
         const binary = (op: string, bp: BindingPower): [BindingPower, LedHandler] =>
@@ -925,6 +927,12 @@ export class Parser {
         this.registerLed(TokenKind.GreaterEquals, ...binary(">=", BP.Relational));
         this.registerLed(TokenKind.LogicalOr,     ...binary("||", BP.LogicalOr));
         this.registerLed(TokenKind.LogicalAnd,    ...binary("&&", BP.LogicalAnd));
+        this.registerLed(TokenKind.Ampersand,      ...binary("&",  BP.Bitwise));
+        this.registerLed(TokenKind.Pipe,           ...binary("|",  BP.Bitwise));
+        this.registerLed(TokenKind.Caret,          ...binary("^",  BP.Bitwise));
+        this.registerLed(TokenKind.LeftShift,        ...binary("<<", BP.Additive));
+        this.registerLed(TokenKind.RightShift,       ...binary(">>", BP.Additive));
+        this.registerLed(TokenKind.UnsignedRightShift, ...binary(">>>", BP.Additive));
 
         // Assignment — right-associative
         const assignment = (op: string): LedHandler => (_p, left) => ({
@@ -935,6 +943,12 @@ export class Parser {
         this.registerLed(TokenKind.Assignment,  BP.Assignment, assignment("="));
         this.registerLed(TokenKind.PlusEquals,  BP.Assignment, assignment("+="));
         this.registerLed(TokenKind.MinusEquals, BP.Assignment, assignment("-="));
+        this.registerLed(TokenKind.AmpersandEquals,      BP.Assignment, assignment("&="));
+        this.registerLed(TokenKind.PipeEquals,           BP.Assignment, assignment("|="));
+        this.registerLed(TokenKind.CaretEquals,          BP.Assignment, assignment("^="));
+        this.registerLed(TokenKind.LeftShiftEquals,      BP.Assignment, assignment("<<="));
+        this.registerLed(TokenKind.RightShiftEquals,     BP.Assignment, assignment(">>="));
+        this.registerLed(TokenKind.UnsignedRightShiftEquals, BP.Assignment, assignment(">>>="));
 
         // Ternary — right-associative
         this.registerLed(TokenKind.Question, BP.Ternary, (_p, left) => {
