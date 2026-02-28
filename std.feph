@@ -1,0 +1,15 @@
+// FEPL standard header (backend-independent preprocessor layer)
+
+$if __BACKEND__ == "python" ${
+$define true True
+$define false False
+$define none None
+}
+$fi
+
+$if __BACKEND__ == "js" ${
+$define true true
+$define false false
+$define none null
+}
+$fi

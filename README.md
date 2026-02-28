@@ -129,6 +129,7 @@ Preprocessor directives are tokenized and can appear anywhere in the file.
 - `$define NAME value`
 - `$undefine NAME`
 - `$include path/to/header.feph`
+- `$include std.feph` (bundled with FEPL CLI)
 - `$if CONDITION ${`
 - `$elif CONDITION ${`
 - `$else ${`
@@ -154,6 +155,7 @@ $fi
 ### Include behavior
 
 - Included `.feph` headers are preprocessor-only (no normal FEPL code)
+- `std.feph` is resolved from the bundled FEPL standard header
 - Include directives execute in place (like a C preprocessor pass)
 - Nested includes are supported
 - Circular includes are rejected

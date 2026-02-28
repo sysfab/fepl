@@ -12,6 +12,10 @@ export type BuildCommandOptions = {
     target?: string;
 };
 
+const STD_FEPH_IMPORT_RE = /^[ \t]*import[ \t]+std\.feph[ \t]*(?:;[ \t]*)?$/gm;
+const STD_FEPH_INCLUDE_RE = /^[ \t]*\$include[ \t]+std\.feph[ \t]*$/gm;
+const BUNDLED_STD_FEPH_PATH = path.resolve(__dirname, "../../../std.feph");
+
 export async function buildCommand(cwd: string, options: BuildCommandOptions = {}): Promise<void> {
     const config = await readConfig(cwd);
     const target = options.target?.trim() || config.target;
@@ -19,8 +23,13 @@ export async function buildCommand(cwd: string, options: BuildCommandOptions = {
 
     const srcDir = path.resolve(cwd, config.src);
     const distDir = path.resolve(cwd, config.dist);
+    const stdHeaderPath = BUNDLED_STD_FEPH_PATH;
 
     await ensureDir(distDir);
+
+    if (!(await pathExists(stdHeaderPath))) {
+        throw new Error(`Bundled std.feph not found at '${stdHeaderPath}'. Reinstall FEPL.`);
+    }
 
     if (!(await pathExists(srcDir))) {
         throw new Error(`Source directory '${config.src}' not found.`);
@@ -41,7 +50,8 @@ export async function buildCommand(cwd: string, options: BuildCommandOptions = {
         const distOutPath = path.join(distDir, outRelativePath);
 
         const source = await readFile(sourcePath, "utf8");
-        const tokens = new Tokenizer(source).tokenize();
+        const normalizedSource = rewriteStdFephReference(source, stdHeaderPath);
+        const tokens = new Tokenizer(normalizedSource).tokenize();
         const preprocessed = await preprocessTokens(tokens, {
             baseDir: path.dirname(sourcePath),
             globalConstants: {
@@ -59,4 +69,10 @@ export async function buildCommand(cwd: string, options: BuildCommandOptions = {
     console.log(
         `Built ${generatedCount} file(s) with '${backend.id}' backend (${backend.fileExtension}) into '${config.dist}'.`
     );
+}
+
+function rewriteStdFephReference(source: string, stdHeaderPath: string): string {
+    return source
+        .replace(STD_FEPH_IMPORT_RE, `$include ${stdHeaderPath}`)
+        .replace(STD_FEPH_INCLUDE_RE, `$include ${stdHeaderPath}`);
 }

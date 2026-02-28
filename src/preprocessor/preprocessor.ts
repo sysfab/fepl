@@ -415,6 +415,14 @@ function expandToken(token: Token, macros: MacroMap, depth: number): Token[] {
         return [token];
     }
 
+    if (
+        replacement.length === 1 &&
+        replacement[0].kind === TokenKind.Identifier &&
+        replacement[0].value === token.value
+    ) {
+        return [token];
+    }
+
     return replacement.flatMap(next => expandToken(next, macros, depth + 1));
 }
 

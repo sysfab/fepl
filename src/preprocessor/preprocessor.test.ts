@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import * as path from "node:path";
 import { Tokenizer } from "../lexer/lexer";
 import { TokenKind } from "../lexer/tokens";
 import { preprocessTokens } from "./preprocessor";
@@ -18,6 +19,8 @@ function readFileMock(filePath: string): Promise<string> {
     }
     return Promise.resolve(content);
 }
+
+const stdHeaderPath = path.resolve(__dirname, "../..", "std.feph");
 
 describe("preprocessTokens", () => {
     it("expands top-level define macros in code tokens", async () => {
@@ -135,6 +138,13 @@ describe("preprocessTokens", () => {
         ]);
     });
 
+    it("treats self-referential macro aliases as no-op", async () => {
+        const tokens = new Tokenizer("$define true true\nlet x = true").tokenize();
+        const result = await preprocessTokens(tokens, { baseDir: "/project", readFile: readFileMock });
+
+        expect(result.tokens.map(t => t.value)).toEqual(["let", "x", "=", "true", ""]);
+    });
+
     it("supports compile-time if blocks with $if $(...) ${ ... $}", async () => {
         const src = "$define FLAG 1\n$if FLAG ${\nlet a = 1\n}\n$fi\n$if 0 ${\nlet b = 2\n}\n$fi\nlet c = 3";
         const tokens = new Tokenizer(src).tokenize();
@@ -179,5 +189,45 @@ describe("preprocessTokens", () => {
         const result = await preprocessTokens(tokens, { baseDir: "/project", readFile: readFileMock });
 
         expect(result.tokens.map(t => t.value)).toEqual(["let", "z", "=", "1", ""]);
+    });
+
+    it("maps std true/false/none macros for js backend", async () => {
+        const src = `$include ${stdHeaderPath}\nlet t = true\nlet f = false\nlet n = none`;
+        const tokens = new Tokenizer(src).tokenize();
+        const result = await preprocessTokens(tokens, {
+            baseDir: "/project",
+            globalConstants: {
+                __BACKEND__: '"js"',
+            },
+        });
+
+        const values = result.tokens
+            .filter(t => t.kind !== TokenKind.Newline && t.kind !== TokenKind.EOF)
+            .map(t => t.value);
+
+        expect(values).toEqual(["let", "t", "=", "true", "let", "f", "=", "false", "let", "n", "=", "null"]);
+        expect(result.defines.true).toBe("true");
+        expect(result.defines.false).toBe("false");
+        expect(result.defines.none).toBe("null");
+    });
+
+    it("maps std true/false/none macros for python backend", async () => {
+        const src = `$include ${stdHeaderPath}\nlet t = true\nlet f = false\nlet n = none`;
+        const tokens = new Tokenizer(src).tokenize();
+        const result = await preprocessTokens(tokens, {
+            baseDir: "/project",
+            globalConstants: {
+                __BACKEND__: '"python"',
+            },
+        });
+
+        const values = result.tokens
+            .filter(t => t.kind !== TokenKind.Newline && t.kind !== TokenKind.EOF)
+            .map(t => t.value);
+
+        expect(values).toEqual(["let", "t", "=", "True", "let", "f", "=", "False", "let", "n", "=", "None"]);
+        expect(result.defines.true).toBe("True");
+        expect(result.defines.false).toBe("False");
+        expect(result.defines.none).toBe("None");
     });
 });

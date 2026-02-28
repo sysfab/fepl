@@ -10,6 +10,7 @@
   },
   "files": [
     "lib",
+    "std.feph",
     "README.md",
     "LICENSE"
   ],
