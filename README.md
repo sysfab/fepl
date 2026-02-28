@@ -1,6 +1,6 @@
 # FEPL
 
-FEPL is a small language + CLI that transpiles `.fepl` source files into backend output (currently JavaScript).
+FEPL is a small language + CLI that transpiles `.fepl` source files into backend output (currently JavaScript and Python).
 
 ## CLI
 
@@ -173,5 +173,7 @@ let target = __BACKEND__
 
 - `js`
   - Output extension: `.js`
+- `python`
+  - Output extension: `.py`
 
 Additional backends can be added via `src/backends` by implementing the backend interface and registering the backend id.
