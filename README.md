@@ -8,12 +8,12 @@ FEPL is a small language + CLI that transpiles `.fepl` source files into backend
 
 - `fepl init`
   - Creates `fepl.json` (if missing)
-  - Ensures `src/`, `backend/`, and `dist/` directories exist
+  - Ensures `src/` and `dist/` directories exist
 - `fepl build`
   - Reads `fepl.json`
   - Finds `*.fepl` files under `src`
   - Runs tokenizer -> preprocessor -> parser -> backend codegen
-  - Writes generated files to both `backend/` and `dist/`
+  - Writes generated files to `dist/`
 
 ### Options
 
@@ -27,7 +27,6 @@ FEPL is a small language + CLI that transpiles `.fepl` source files into backend
 {
   "target": "js",
   "src": "src",
-  "backend": "backend",
   "dist": "dist"
 }
 ```

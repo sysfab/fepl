@@ -18,10 +18,8 @@ export async function buildCommand(cwd: string, options: BuildCommandOptions = {
     const backend = resolveBackend(target);
 
     const srcDir = path.resolve(cwd, config.src);
-    const backendDir = path.resolve(cwd, config.backend);
     const distDir = path.resolve(cwd, config.dist);
 
-    await ensureDir(backendDir);
     await ensureDir(distDir);
 
     if (!(await pathExists(srcDir))) {
@@ -40,7 +38,6 @@ export async function buildCommand(cwd: string, options: BuildCommandOptions = {
         const relativePath = path.relative(srcDir, sourcePath);
         const outRelativePath = withOutputExtension(relativePath, backend);
 
-        const backendOutPath = path.join(backendDir, outRelativePath);
         const distOutPath = path.join(distDir, outRelativePath);
 
         const source = await readFile(sourcePath, "utf8");
@@ -53,15 +50,13 @@ export async function buildCommand(cwd: string, options: BuildCommandOptions = {
         });
         const generated = backend.generate(new Parser(preprocessed.tokens).parseProgram());
 
-        await ensureDir(path.dirname(backendOutPath));
         await ensureDir(path.dirname(distOutPath));
 
-        await writeFile(backendOutPath, `${generated}\n`, "utf8");
         await writeFile(distOutPath, `${generated}\n`, "utf8");
         generatedCount++;
     }
 
     console.log(
-        `Built ${generatedCount} file(s) with '${backend.id}' backend (${backend.fileExtension}) into '${config.backend}' and '${config.dist}'.`
+        `Built ${generatedCount} file(s) with '${backend.id}' backend (${backend.fileExtension}) into '${config.dist}'.`
     );
 }

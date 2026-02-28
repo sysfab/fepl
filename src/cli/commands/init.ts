@@ -15,8 +15,7 @@ export async function initCommand(cwd: string): Promise<void> {
     }
 
     await ensureDir(path.join(cwd, DEFAULT_CONFIG.src));
-    await ensureDir(path.join(cwd, DEFAULT_CONFIG.backend));
     await ensureDir(path.join(cwd, DEFAULT_CONFIG.dist));
 
-    console.log(`Ensured '${DEFAULT_CONFIG.src}/', '${DEFAULT_CONFIG.backend}/', '${DEFAULT_CONFIG.dist}/'`);
+    console.log(`Ensured '${DEFAULT_CONFIG.src}/' and '${DEFAULT_CONFIG.dist}/'`);
 }

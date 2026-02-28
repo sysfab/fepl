@@ -5,7 +5,6 @@ import { pathExists } from "./fs";
 export type FeplConfig = {
     target: string;
     src: string;
-    backend: string;
     dist: string;
 };
 
@@ -14,7 +13,6 @@ export const CONFIG_FILE = "fepl.json";
 export const DEFAULT_CONFIG: FeplConfig = {
     target: "js",
     src: "src",
-    backend: "backend",
     dist: "dist",
 };
 
@@ -36,7 +34,7 @@ export async function readConfig(cwd: string): Promise<FeplConfig> {
     }
 
     const cfg = parsed as Partial<FeplConfig>;
-    for (const key of ["target", "src", "backend", "dist"] as const) {
+    for (const key of ["target", "src", "dist"] as const) {
         if (typeof cfg[key] !== "string" || cfg[key]!.trim() === "") {
             throw new Error(`Invalid ${CONFIG_FILE}. '${key}' must be a non-empty string.`);
         }
@@ -45,7 +43,6 @@ export async function readConfig(cwd: string): Promise<FeplConfig> {
     return {
         target: cfg.target!,
         src: cfg.src!,
-        backend: cfg.backend!,
         dist: cfg.dist!,
     };
 }
