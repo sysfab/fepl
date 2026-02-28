@@ -127,6 +127,7 @@ Preprocessor directives are tokenized and can appear anywhere in the file.
 ### Supported directives
 
 - `$define NAME value`
+- `$define NAME(arg1, arg2, ...) value`
 - `$undefine NAME`
 - `$include path/to/header.feph`
 - `$include std.feph` (bundled with FEPL CLI)

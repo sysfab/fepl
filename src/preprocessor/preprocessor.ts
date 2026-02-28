@@ -12,6 +12,7 @@ export type DefineDirective = {
     kind: "define";
     name: string;
     value: string;
+    parameters?: string[];
 };
 
 export type UndefineDirective = {
@@ -43,7 +44,12 @@ export type PreprocessorDirective =
 
 type ParsedDirective = PreprocessorDirective | { kind: "ifEnd" };
 
-type MacroMap = Map<string, Token[]>;
+type MacroDefinition = {
+    parameters: string[] | null;
+    replacement: Token[];
+};
+
+type MacroMap = Map<string, MacroDefinition>;
 
 type PreprocessOptions = {
     baseDir: string;
@@ -80,7 +86,7 @@ export async function preprocessTokens(tokens: Token[], options: PreprocessOptio
         tokens: [...output, eof],
         directives,
         defines: Object.fromEntries(
-            [...macros.entries()].map(([name, valueTokens]) => [name, valueTokens.map(t => t.value).join(" ").trim()])
+            [...macros.entries()].map(([name, macro]) => [name, macro.replacement.map(t => t.value).join(" ").trim()])
         ),
     };
 }
@@ -136,7 +142,10 @@ async function processTokenStream(tokens: Token[], ctx: ProcessContext): Promise
             ctx.directives.push(directive);
 
             if (directive.kind === "define") {
-                ctx.macros.set(directive.name, tokenizeMacroValue(directive.value));
+                ctx.macros.set(directive.name, {
+                    parameters: directive.parameters ?? null,
+                    replacement: tokenizeMacroValue(directive.value),
+                });
                 continue;
             }
 
@@ -168,9 +177,21 @@ async function processTokenStream(tokens: Token[], ctx: ProcessContext): Promise
             continue;
         }
 
-        const expanded = expandToken(token, ctx.macros, 0);
+        const chunkEnd = nextDirectiveIndex(tokens, i);
+        const expanded = expandTokens(tokens.slice(i, chunkEnd), ctx.macros, 0);
         ctx.output.push(...expanded);
+        i = chunkEnd - 1;
     }
+}
+
+function nextDirectiveIndex(tokens: Token[], from: number): number {
+    for (let i = from; i < tokens.length; i++) {
+        if (tokens[i].kind === TokenKind.Preprocessor) {
+            return i;
+        }
+    }
+
+    return tokens.length;
 }
 
 type IfBranch = {
@@ -258,8 +279,7 @@ function nextNonTriviaIndex(tokens: Token[], from: number): number {
 }
 
 function evaluateIfCondition(condition: string, macros: MacroMap): boolean {
-    const tokens = tokenizeMacroValue(condition)
-        .flatMap(token => expandToken(token, macros, 0))
+    const tokens = expandTokens(tokenizeMacroValue(condition), macros, 0)
         .filter(token => !isTrivia(token.kind));
 
     if (tokens.length === 0) {
@@ -321,7 +341,10 @@ function buildInitialMacros(constants: Record<string, string>): MacroMap {
         if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
             throw new Error(`Invalid global constant name '${name}'.`);
         }
-        macros.set(name, tokenizeMacroValue(value));
+        macros.set(name, {
+            parameters: null,
+            replacement: tokenizeMacroValue(value),
+        });
     }
 
     return macros;
@@ -372,18 +395,20 @@ function parseDirectiveToken(token: Token): ParsedDirective {
     }
 
     if (name === "define") {
-        const parts = arg.split(/\s+/, 2);
-        const macroName = parts[0] ?? "";
-        const macroValue = arg.slice(macroName.length).trim();
+        const parsedDefine = parseDefineArguments(arg);
+        const macroName = parsedDefine.name;
+        const macroValue = parsedDefine.value;
 
-        if (!macroName || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(macroName)) {
-            throw new Error(`$define requires a valid macro name, got '${macroName || arg}'.`);
-        }
         if (macroValue.length === 0) {
             throw new Error(`$define '${macroName}' requires a value.`);
         }
 
-        return { kind: "define", name: macroName, value: macroValue };
+        return {
+            kind: "define",
+            name: macroName,
+            value: macroValue,
+            ...(parsedDefine.parameters ? { parameters: parsedDefine.parameters } : {}),
+        };
     }
 
     if (name === "undefine") {
@@ -401,29 +426,202 @@ function tokenizeMacroValue(value: string): Token[] {
     return tokens.filter(t => t.kind !== TokenKind.Newline && t.kind !== TokenKind.Preprocessor);
 }
 
-function expandToken(token: Token, macros: MacroMap, depth: number): Token[] {
+function expandTokens(tokens: Token[], macros: MacroMap, depth: number): Token[] {
     if (depth > 24) {
         throw new Error("Macro expansion exceeded maximum depth.");
     }
 
-    if (token.kind !== TokenKind.Identifier) {
-        return [token];
+    const expanded: Token[] = [];
+
+    for (let i = 0; i < tokens.length; i++) {
+        const token = tokens[i];
+
+        if (token.kind !== TokenKind.Identifier) {
+            expanded.push(token);
+            continue;
+        }
+
+        const macro = macros.get(token.value);
+        if (!macro) {
+            expanded.push(token);
+            continue;
+        }
+
+        if (macro.parameters === null) {
+            if (
+                macro.replacement.length === 1 &&
+                macro.replacement[0].kind === TokenKind.Identifier &&
+                macro.replacement[0].value === token.value
+            ) {
+                expanded.push(token);
+                continue;
+            }
+
+            expanded.push(...expandTokens(cloneTokens(macro.replacement), macros, depth + 1));
+            continue;
+        }
+
+        const invocation = parseMacroInvocation(tokens, i);
+        if (!invocation) {
+            expanded.push(token);
+            continue;
+        }
+
+        if (invocation.arguments.length !== macro.parameters.length) {
+            throw new Error(
+                `Macro '${token.value}' expects ${macro.parameters.length} argument(s), got ${invocation.arguments.length}.`
+            );
+        }
+
+        const argumentMap = new Map<string, Token[]>(
+            macro.parameters.map((name, paramIndex) => [name, cloneTokens(invocation.arguments[paramIndex])])
+        );
+
+        const replaced = macro.replacement.flatMap((replacementToken) => {
+            if (replacementToken.kind !== TokenKind.Identifier) {
+                return [replacementToken];
+            }
+
+            return argumentMap.get(replacementToken.value) ?? [replacementToken];
+        });
+
+        expanded.push(...expandTokens(cloneTokens(replaced), macros, depth + 1));
+        i = invocation.endIndex;
     }
 
-    const replacement = macros.get(token.value);
-    if (!replacement) {
-        return [token];
+    return expanded;
+}
+
+function parseMacroInvocation(tokens: Token[], macroIndex: number): { arguments: Token[][]; endIndex: number } | null {
+    const openParenIndex = nextNonTriviaIndex(tokens, macroIndex + 1);
+    if (openParenIndex === -1 || tokens[openParenIndex].kind !== TokenKind.OpenParen) {
+        return null;
     }
 
-    if (
-        replacement.length === 1 &&
-        replacement[0].kind === TokenKind.Identifier &&
-        replacement[0].value === token.value
-    ) {
-        return [token];
+    const args: Token[][] = [];
+    let currentArg: Token[] = [];
+    let depthParen = 0;
+    let depthBracket = 0;
+    let depthCurly = 0;
+    let sawComma = false;
+
+    for (let i = openParenIndex + 1; i < tokens.length; i++) {
+        const token = tokens[i];
+
+        if (token.kind === TokenKind.OpenParen) {
+            depthParen++;
+            currentArg.push(token);
+            continue;
+        }
+
+        if (token.kind === TokenKind.CloseParen) {
+            if (depthParen > 0) {
+                depthParen--;
+                currentArg.push(token);
+                continue;
+            }
+
+            if (depthBracket !== 0 || depthCurly !== 0) {
+                throw new Error("Unbalanced macro invocation delimiters.");
+            }
+
+            if (sawComma || currentArg.length > 0) {
+                args.push(currentArg);
+            }
+
+            return {
+                arguments: args,
+                endIndex: i,
+            };
+        }
+
+        if (token.kind === TokenKind.OpenBracket) {
+            depthBracket++;
+            currentArg.push(token);
+            continue;
+        }
+
+        if (token.kind === TokenKind.CloseBracket) {
+            if (depthBracket > 0) {
+                depthBracket--;
+            }
+            currentArg.push(token);
+            continue;
+        }
+
+        if (token.kind === TokenKind.OpenCurly) {
+            depthCurly++;
+            currentArg.push(token);
+            continue;
+        }
+
+        if (token.kind === TokenKind.CloseCurly) {
+            if (depthCurly > 0) {
+                depthCurly--;
+            }
+            currentArg.push(token);
+            continue;
+        }
+
+        if (
+            token.kind === TokenKind.Comma &&
+            depthParen === 0 &&
+            depthBracket === 0 &&
+            depthCurly === 0
+        ) {
+            args.push(currentArg);
+            currentArg = [];
+            sawComma = true;
+            continue;
+        }
+
+        currentArg.push(token);
     }
 
-    return replacement.flatMap(next => expandToken(next, macros, depth + 1));
+    throw new Error(`Unclosed macro invocation for '${tokens[macroIndex].value}'.`);
+}
+
+function cloneTokens(tokens: Token[]): Token[] {
+    return tokens.map(token => ({ ...token }));
+}
+
+function parseDefineArguments(arg: string): { name: string; parameters: string[] | null; value: string } {
+    const nameMatch = arg.match(/^([A-Za-z_][A-Za-z0-9_]*)/);
+    if (!nameMatch) {
+        throw new Error(`$define requires a valid macro name, got '${arg}'.`);
+    }
+
+    const name = nameMatch[1];
+    let rest = arg.slice(name.length);
+    let parameters: string[] | null = null;
+
+    if (rest.startsWith("(")) {
+        const closeParenIndex = rest.indexOf(")");
+        if (closeParenIndex === -1) {
+            throw new Error(`$define '${name}' has an unterminated parameter list.`);
+        }
+
+        const rawParameters = rest.slice(1, closeParenIndex).trim();
+        parameters = rawParameters.length === 0
+            ? []
+            : rawParameters.split(",").map(part => part.trim());
+
+        const seen = new Set<string>();
+        for (const parameter of parameters) {
+            if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(parameter)) {
+                throw new Error(`$define '${name}' has invalid parameter '${parameter}'.`);
+            }
+            if (seen.has(parameter)) {
+                throw new Error(`$define '${name}' has duplicate parameter '${parameter}'.`);
+            }
+            seen.add(parameter);
+        }
+
+        rest = rest.slice(closeParenIndex + 1);
+    }
+
+    const value = rest.trim();
+    return { name, parameters, value };
 }
 
 function isTrivia(kind: TokenKind): boolean {

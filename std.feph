@@ -1,15 +1,59 @@
-// FEPL standard header (backend-independent preprocessor layer)
+// FEPL minimal standard header (preprocessor-only)
 
+// Python
 $if __BACKEND__ == "python" ${
+
+// Constants
 $define true True
 $define false False
 $define none None
+
+// Functions
+$define str(x) getattr(__import__("builtins"), "str")(x)
+$define int(x) getattr(__import__("builtins"), "int")(x)
+$define float(x) getattr(__import__("builtins"), "float")(x)
+$define bool(x) getattr(__import__("builtins"), "bool")(x)
+$define len(x) getattr(__import__("builtins"), "len")(x)
+$define abs(x) getattr(__import__("builtins"), "abs")(x)
+$define round(x) getattr(__import__("builtins"), "round")(x)
+$define min(a, b) getattr(__import__("builtins"), "min")(a, b)
+$define max(a, b) getattr(__import__("builtins"), "max")(a, b)
+$define pow(a, b) getattr(__import__("builtins"), "pow")(a, b)
+$define sqrt(x) getattr(__import__("math"), "sqrt")(x)
+$define contains(collection, item) getattr(collection, "__contains__")(item)
+$define range(start, end, step) getattr(__import__("builtins"), "range")(start, end, step)
+$define keys(obj) list(getattr(obj, "keys")())
+$define values(obj) list(getattr(obj, "values")())
+
 }
 $fi
 
+// JS
 $if __BACKEND__ == "js" ${
+
+// Constants
 $define true true
 $define false false
 $define none null
+
+// Functions
+$define print(x) console.log(x)
+$define input() prompt()
+$define str(x) String(x)
+$define int(x) Number.parseInt(x, 10)
+$define float(x) Number.parseFloat(x)
+$define bool(x) Boolean(x)
+$define len(x) x.length
+$define abs(x) Math["abs"](x)
+$define round(x) Math["round"](x)
+$define min(a, b) Math["min"](a, b)
+$define max(a, b) Math["max"](a, b)
+$define pow(a, b) Math["pow"](a, b)
+$define sqrt(x) Math["sqrt"](x)
+$define contains(collection, item) collection.includes(item)
+$define range(start, end, step) Array.from({ length: Math["max"](0, Math["ceil"]((end - start) / step)) }, (_, i) => i * step + start)
+$define keys(obj) Object["keys"](obj)
+$define values(obj) Object["values"](obj)
+
 }
 $fi

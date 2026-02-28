@@ -67,6 +67,36 @@ describe("preprocessTokens", () => {
         ]);
     });
 
+    it("supports function-like macros with arguments", async () => {
+        const tokens = new Tokenizer("$define ADD(a, b) a + b\nlet sum = ADD(2, 3)").tokenize();
+        const result = await preprocessTokens(tokens, { baseDir: "/project", readFile: readFileMock });
+
+        expect(result.tokens.map(t => t.value)).toEqual(["let", "sum", "=", "2", "+", "3", ""]);
+    });
+
+    it("supports nested function-like macro calls", async () => {
+        const src = "$define ADD(a, b) a + b\n$define DOUBLE(x) ADD(x, x)\nlet out = DOUBLE(5)";
+        const tokens = new Tokenizer(src).tokenize();
+        const result = await preprocessTokens(tokens, { baseDir: "/project", readFile: readFileMock });
+
+        expect(result.tokens.map(t => t.value)).toEqual(["let", "out", "=", "5", "+", "5", ""]);
+    });
+
+    it("supports commas inside function-like macro arguments", async () => {
+        const src = "$define FIRST(x, y) x\nlet v = FIRST([1, 2], 3)";
+        const tokens = new Tokenizer(src).tokenize();
+        const result = await preprocessTokens(tokens, { baseDir: "/project", readFile: readFileMock });
+
+        expect(result.tokens.map(t => t.value)).toEqual(["let", "v", "=", "[", "1", ",", "2", "]", ""]);
+    });
+
+    it("throws when function-like macro argument count is incorrect", async () => {
+        const tokens = new Tokenizer("$define ADD(a, b) a + b\nlet bad = ADD(1)").tokenize();
+
+        await expect(preprocessTokens(tokens, { baseDir: "/project", readFile: readFileMock }))
+            .rejects.toThrow("Macro 'ADD' expects 2 argument(s), got 1.");
+    });
+
     it("supports $undefine and executes included instructions in order", async () => {
         const tokens = new Tokenizer("$include undef.feph\nlet x = X").tokenize();
         const result = await preprocessTokens(tokens, { baseDir: "/project", readFile: readFileMock });
@@ -211,6 +241,59 @@ describe("preprocessTokens", () => {
         expect(result.defines.none).toBe("null");
     });
 
+    it("expands std I/O helper macros for js backend", async () => {
+        const src = `$include ${stdHeaderPath}\nprint("hi")\nlet q = input()`;
+        const tokens = new Tokenizer(src).tokenize();
+        const result = await preprocessTokens(tokens, {
+            baseDir: "/project",
+            globalConstants: {
+                __BACKEND__: '"js"',
+            },
+        });
+
+        const values = result.tokens
+            .filter(t => t.kind !== TokenKind.Newline && t.kind !== TokenKind.EOF)
+            .map(t => t.value);
+
+        expect(values).toEqual([
+            "console", ".", "log", "(", '"hi"', ")",
+            "let", "q", "=", "prompt", "(", ")",
+        ]);
+    });
+
+    it("expands std conversion, math, and collection helpers for js backend", async () => {
+        const src = `$include ${stdHeaderPath}\nlet a = str(5)\nlet b = int("7")\nlet c = float("3.14")\nlet d = bool(1)\nlet l = len(items)\nlet ab = abs(value)\nlet rd = round(3.6)\nlet mn = min(left, right)\nlet mx = max(left, right)\nlet pw = pow(2, 3)\nlet sq = sqrt(size)\nlet has = contains(items, needle)\nlet r = range(1, 5, 2)\nlet ks = keys(user)\nlet vs = values(user)`;
+        const tokens = new Tokenizer(src).tokenize();
+        const result = await preprocessTokens(tokens, {
+            baseDir: "/project",
+            globalConstants: {
+                __BACKEND__: '"js"',
+            },
+        });
+
+        const values = result.tokens
+            .filter(t => t.kind !== TokenKind.Newline && t.kind !== TokenKind.EOF)
+            .map(t => t.value);
+
+        expect(values).toEqual([
+            "let", "a", "=", "String", "(", "5", ")",
+            "let", "b", "=", "Number", ".", "parseInt", "(", '"7"', ",", "10", ")",
+            "let", "c", "=", "Number", ".", "parseFloat", "(", '"3.14"', ")",
+            "let", "d", "=", "Boolean", "(", "1", ")",
+            "let", "l", "=", "items", ".", "length",
+            "let", "ab", "=", "Math", "[", '"abs"', "]", "(", "value", ")",
+            "let", "rd", "=", "Math", "[", '"round"', "]", "(", "3.6", ")",
+            "let", "mn", "=", "Math", "[", '"min"', "]", "(", "left", ",", "right", ")",
+            "let", "mx", "=", "Math", "[", '"max"', "]", "(", "left", ",", "right", ")",
+            "let", "pw", "=", "Math", "[", '"pow"', "]", "(", "2", ",", "3", ")",
+            "let", "sq", "=", "Math", "[", '"sqrt"', "]", "(", "size", ")",
+            "let", "has", "=", "items", ".", "includes", "(", "needle", ")",
+            "let", "r", "=", "Array", ".", "from", "(", "{", "length", ":", "Math", "[", '"max"', "]", "(", "0", ",", "Math", "[", '"ceil"', "]", "(", "(", "5", "-", "1", ")", "/", "2", ")", ")", "}", ",", "(", "_", ",", "i", ")", "=>", "i", "*", "2", "+", "1", ")",
+            "let", "ks", "=", "Object", "[", '"keys"', "]", "(", "user", ")",
+            "let", "vs", "=", "Object", "[", '"values"', "]", "(", "user", ")",
+        ]);
+    });
+
     it("maps std true/false/none macros for python backend", async () => {
         const src = `$include ${stdHeaderPath}\nlet t = true\nlet f = false\nlet n = none`;
         const tokens = new Tokenizer(src).tokenize();
@@ -229,5 +312,38 @@ describe("preprocessTokens", () => {
         expect(result.defines.true).toBe("True");
         expect(result.defines.false).toBe("False");
         expect(result.defines.none).toBe("None");
+    });
+
+    it("expands std conversion, math, and collection helpers for python backend", async () => {
+        const src = `$include ${stdHeaderPath}\nlet a = str(5)\nlet b = int("7")\nlet c = float("3.14")\nlet d = bool(1)\nlet l = len(items)\nlet ab = abs(value)\nlet rd = round(3.6)\nlet mn = min(left, right)\nlet mx = max(left, right)\nlet pw = pow(2, 3)\nlet sq = sqrt(size)\nlet has = contains(items, needle)\nlet r = range(1, 5, 2)\nlet ks = keys(user)\nlet vs = values(user)`;
+        const tokens = new Tokenizer(src).tokenize();
+        const result = await preprocessTokens(tokens, {
+            baseDir: "/project",
+            globalConstants: {
+                __BACKEND__: '"python"',
+            },
+        });
+
+        const values = result.tokens
+            .filter(t => t.kind !== TokenKind.Newline && t.kind !== TokenKind.EOF)
+            .map(t => t.value);
+
+        expect(values).toEqual([
+            "let", "a", "=", "getattr", "(", "__import__", "(", '"builtins"', ")", ",", '"str"', ")", "(", "5", ")",
+            "let", "b", "=", "getattr", "(", "__import__", "(", '"builtins"', ")", ",", '"int"', ")", "(", '"7"', ")",
+            "let", "c", "=", "getattr", "(", "__import__", "(", '"builtins"', ")", ",", '"float"', ")", "(", '"3.14"', ")",
+            "let", "d", "=", "getattr", "(", "__import__", "(", '"builtins"', ")", ",", '"bool"', ")", "(", "1", ")",
+            "let", "l", "=", "getattr", "(", "__import__", "(", '"builtins"', ")", ",", '"len"', ")", "(", "items", ")",
+            "let", "ab", "=", "getattr", "(", "__import__", "(", '"builtins"', ")", ",", '"abs"', ")", "(", "value", ")",
+            "let", "rd", "=", "getattr", "(", "__import__", "(", '"builtins"', ")", ",", '"round"', ")", "(", "3.6", ")",
+            "let", "mn", "=", "getattr", "(", "__import__", "(", '"builtins"', ")", ",", '"min"', ")", "(", "left", ",", "right", ")",
+            "let", "mx", "=", "getattr", "(", "__import__", "(", '"builtins"', ")", ",", '"max"', ")", "(", "left", ",", "right", ")",
+            "let", "pw", "=", "getattr", "(", "__import__", "(", '"builtins"', ")", ",", '"pow"', ")", "(", "2", ",", "3", ")",
+            "let", "sq", "=", "getattr", "(", "__import__", "(", '"math"', ")", ",", '"sqrt"', ")", "(", "size", ")",
+            "let", "has", "=", "getattr", "(", "items", ",", '"__contains__"', ")", "(", "needle", ")",
+            "let", "r", "=", "getattr", "(", "__import__", "(", '"builtins"', ")", ",", '"range"', ")", "(", "1", ",", "5", ",", "2", ")",
+            "let", "ks", "=", "list", "(", "getattr", "(", "user", ",", '"keys"', ")", "(", ")", ")",
+            "let", "vs", "=", "list", "(", "getattr", "(", "user", ",", '"values"', ")", "(", ")", ")",
+        ]);
     });
 });
