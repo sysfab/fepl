@@ -1,3 +1,5 @@
+$include std.feph
+
 let i = 0
 while (i < 3) {
     i += 1
@@ -8,11 +10,11 @@ for (item in items) {
     print(item)
 }
 
-for (var j = 5; j > 0; j--) {
-    print(j)
+for (step in range(1, 6, 2)) {
+    print(step)
 }
 
-if (i == 3) {
+if (i == 3 && contains(items, "b")) {
     print("done")
 } else {
     print("not-done")

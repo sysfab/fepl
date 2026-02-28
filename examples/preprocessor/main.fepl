@@ -1,7 +1,10 @@
+$include std.feph
 $include flags.feph
 
 let backend = TARGET_NAME
 let feature = FEATURE_LABEL
+let sample = range(0, 7, 3)
+let hasThree = contains(sample, 3)
 
 $define MODE dev
 
@@ -19,3 +22,7 @@ $fi
 $undefine MODE
 
 let modeToken = MODE
+
+print(`target=${backend} feature=${feature}`)
+print(hasThree)
+print(len(sample))

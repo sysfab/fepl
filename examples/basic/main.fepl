@@ -1,3 +1,5 @@
+$include std.feph
+
 import { readFile, writeFile as write } from "fs"
 
 let greeting = "Hello from FEPL"
@@ -9,12 +11,20 @@ func add(a, b) {
 }
 
 let total = add(nums[0], nums[1])
-let msg = `${greeting} - total is ${total}`
+let msg = `${greeting} - total is ${str(total)}`
 
-let { name, role: title } = user
-let [first, second] = nums
+let ids = range(1, 7, 2)
+let hasThree = contains(ids, 3)
+let keyList = keys(user)
+let valueList = values(user)
 
-name = "Grace"
-[first, second] = [second, first]
+let rounded = round(3.6)
+let root = sqrt(49)
+let hi = max(abs(-2), min(5, 9))
+
+print(msg)
+print(hasThree)
+print(len(keyList))
+print(root + rounded + hi)
 
 delete user.role
